@@ -31,3 +31,6 @@ model.fit(X_train, Y_train, epochs=150, batch_size=12)
 # evaluate the model
 scores = model.evaluate(X_test, Y_test)
 print("\n%s: %.2f%%" % (model.metrics_names[1], scores[1]*100))
+
+# predictions = model.predict(X_test)
+# print(predictions)

@@ -15,17 +15,19 @@ dataset = numpy.loadtxt("pima-indians-diabetes.csv", delimiter=",")
 train_dataset, test_dataset = numpy.split(dataset, [round(dataset.shape[0]*0.80)])
 
 # split into input (X) and output (Y) variables
-X_train = torch.from_numpy(train_dataset[:,0:8])
-Y_train = torch.from_numpy(train_dataset[:,8])
+X_train = torch.from_numpy(train_dataset[:,0:8])[:600]
+Y_train = torch.from_numpy(train_dataset[:,8])[:600]
 
 X_test = torch.from_numpy(test_dataset[:,0:8])
 Y_test = torch.from_numpy(test_dataset[:,8])
 
+
 # Hyper Parameters
 input_size = 8
 num_classes = 1
+hidden_size = 12
 num_epochs = 150
-batch_size = 12
+batch_size = 32
 learning_rate = 0.001
 
 train = data_utils.TensorDataset(X_train, Y_train)
@@ -36,29 +38,29 @@ test_loader = data_utils.DataLoader(test, batch_size=batch_size, shuffle=False, 
 
 # Neural Network Model (2 hidden layers)
 class VanillaNet(nn.Module):
-    def __init__(self, input_size, num_classes):
+    def __init__(self, input_size, hidden_size, num_classes):
         super(VanillaNet, self).__init__()
-        self.input_layer = nn.Linear(input_size, 12)
-        self.hidden_layer1 = nn.Linear(12, 8)
-        self.hidden_layer2 = nn.Linear(8, num_classes)
+        self.fc1 = nn.Linear(input_size, hidden_size)
+        self.relu = nn.ReLU()
+        self.dropout = nn.Dropout()
+        self.fc2 = nn.Linear(hidden_size, hidden_size)
+        self.fc3 = nn.Linear(hidden_size, num_classes)
+        self.input_layer = nn.Linear(input_size, hidden_size)
+        self.hidden_layer1 = nn.Linear(hidden_size, input_size)
+        self.hidden_layer2 = nn.Linear(input_size, num_classes)
 
     def forward(self, x):
-        out = self.input_layer(x)
-        out = F.relu(self.hidden_layer1(out))
-        out = F.relu(self.hidden_layer2(out))
+        out = self.fc1(x)
+        out = self.relu(out)
+        out = self.dropout(out)
+        out = self.fc2(out)
+        out = self.relu(out)
+        out = self.dropout(out)
+        out = self.fc3(out)
         return out
 
 
-def init_weights(model):
-    print(model)
-    if type(model) == nn.Linear:
-        nn.init.xavier_uniform(model.weight)
-        nn.init.constant(model.bias, 0)
-        print(model.weight)
-        print(model.bias)
-
-model = VanillaNet(input_size, num_classes)
-model.apply(init_weights)
+model = VanillaNet(input_size, hidden_size, num_classes)
 
 # Loss and Optimizer
 criterion = nn.BCEWithLogitsLoss()
@@ -78,19 +80,22 @@ for epoch in range(num_epochs):
         loss.backward()
         optimizer.step()
 
-        if (i+1) % batch_size == 0:
-            print ('Epoch [%d/%d], Step [%d/%d], Loss: %.4f'
-                   %(epoch+1, num_epochs, i+1, len(train_dataset)//batch_size, loss.data[0]))
+        # if (i+1) % 10 == 0:
+        #     print ('Epoch [%d/%d], Step [%d/%d], Loss: %.4f'
+        #            %(epoch+1, num_epochs, i+1, len(train_dataset)//batch_size, loss.data[0]))
+        print ('Epoch [%d/%d], Loss: %.4f'
+                   %(epoch+1, num_epochs, loss.data[0]))
+
 
 # Test the Model
 correct = 0
 total = 0
 for features, labels in test_loader:
     features = Variable(features).float()
-    outputs = model(features)
+    outputs = F.sigmoid(model(features))
     predicted = torch.round(outputs.data).float().squeeze()
     total += labels.size(0)
     correct += (predicted == labels.float()).sum()
-    break
+
 
 print('\nacc: %.2f%%' % ((correct / total) * 100))
