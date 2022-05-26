@@ -69,7 +69,7 @@ simplegeneric==0.8.1
 six==1.11.0
 smart-open==1.5.3
 spacy==1.9.0
-tensorflow==1.4.1
+tensorflow==2.7.2
 tensorflow-tensorboard==0.4.0rc3
 termcolor==1.1.0
 terminado==0.6
